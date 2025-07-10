@@ -26,54 +26,53 @@ void Bencode::Parser::Print()
 
 inline std::string ToHex(const std::string& binary)
 {
-	std::ostringstream oss;
-	for (unsigned char c : binary)
-	{
-		oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
-	}
-	return oss.str();
+    std::ostringstream oss;
+    for (unsigned char c : binary)
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    return oss.str();
 }
 
 void Bencode::Parser::GetHash()
 {
-	for (size_t index = 0; auto & element : m_items)
-	{
-		if (element.raw_value == "pieces")
-		{
-			m_hash = m_items[index + 1].raw_value;
-			m_items.erase(m_items.begin() + index + 1);
-		}
-		index++;
-	}
-
+    for (auto it = m_items.begin(); it != m_items.end(); ++it) {
+        if (it->raw_value == "pieces") {
+            auto next = std::next(it);
+            if (next != m_items.end()) {
+                m_hash = next->raw_value;
+                m_items.erase(next);
+            }
+            break;
+        }
+    }
 }
 
 void Bencode::Parser::PrintPieces()
 {
-	if (m_hash.size() % 20 != 0)
-		throw Exception("Each SHA-1 hash needs to be 20 bytes!");
-	size_t hashAmount = m_hash.size() / 20;
-	for (size_t i = 0; i < hashAmount; i++)
-	{
-		std::string hash = m_hash.substr(i * 20, 20);
-		std::cout << "Piece " << i + 1 << ":\t" << ToHex(hash) << std::endl;
-		Sleep(200);
-	}
+    constexpr size_t SHA1_HASH_SIZE = 20;
+    if (m_hash.size() % SHA1_HASH_SIZE != 0)
+        throw Exception("Each SHA-1 hash needs to be 20 bytes!");
+    size_t hashAmount = m_hash.size() / SHA1_HASH_SIZE;
+    for (size_t i = 0; i < hashAmount; ++i)
+    {
+        std::string hash = m_hash.substr(i * SHA1_HASH_SIZE, SHA1_HASH_SIZE);
+        std::cout << "Piece " << (i + 1) << ":\t" << ToHex(hash) << std::endl;
+        Sleep(200);
+    }
 }
 
 
 void Bencode::Parser::AddFile(const std::filesystem::path& path)
 {
-	std::ifstream fileIn(path, std::ios::binary);
-	if (!fileIn.is_open())
-		throw Exception(std::format("File cannot be opened at {}", path.string()));
-	fileIn.seekg(0, std::ios::end);
-	size_t fileSize = fileIn.tellg();
-	std::string fileData;
-	fileData.resize(fileSize);
-	fileIn.seekg(0, std::ios::beg);
-	fileIn.read(fileData.data(), fileSize);
-	AddString(fileData);
+    std::ifstream fileIn(path, std::ios::binary);
+    if (!fileIn.is_open())
+        throw Exception(std::format("File cannot be opened at {}", path.string()));
+    fileIn.seekg(0, std::ios::end);
+    size_t fileSize = static_cast<size_t>(fileIn.tellg());
+    fileIn.seekg(0, std::ios::beg);
+    std::string fileData(fileSize, '\0');
+    if (!fileIn.read(fileData.data(), fileSize))
+        throw Exception("File read error!");
+    AddString(fileData);
 }
 
 void Bencode::Parser::Reset()
