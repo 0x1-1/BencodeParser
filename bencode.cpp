@@ -13,6 +13,8 @@ void Bencode::Parser::AddString(const std::string& ref, std::ostream& os)
 	GetHash();
 	Print();
 	PrintPieces();
+	WToFile();
+
 }
 
 void Bencode::Parser::Print()
@@ -21,6 +23,7 @@ void Bencode::Parser::Print()
 	for (auto& element : m_items)
 	{
 		std::cout << element.raw_value << std::endl;
+		m_holder += element.raw_value + "\n";
 	}
 }
 
@@ -56,7 +59,8 @@ void Bencode::Parser::PrintPieces()
     {
         std::string hash = m_hash.substr(i * SHA1_HASH_SIZE, SHA1_HASH_SIZE);
         std::cout << "Piece " << (i + 1) << ":\t" << ToHex(hash) << std::endl;
-        Sleep(200);
+		m_holder += ToHex(hash) + "\n";
+        
     }
 }
 
@@ -80,6 +84,69 @@ void Bencode::Parser::Reset()
 	m_string = "";
 	m_int = "";
 	i = 0;
+}
+
+void Bencode::Parser::WToFile()
+{
+	std::cout << "\tDo you want to save the decoded info in a text file? Enter Y to continue.\t" << std::endl;
+	char ch;
+	std::cin >> ch;
+	if (toupper(ch) == 'Y')
+	{
+		std::cout << "Enter the name for the text file. File will be saved in your desktop." << std::endl;
+		std::string fName;
+		std::cin >> fName;
+		fName = "C:\\Users\\User\\Desktop\\" + fName + ".txt";
+		std::wstring w_string = std::wstring(fName.begin(), fName.end());
+		LPCWSTR f_Name = w_string.data();
+		
+		HANDLE hFile = CreateFileW
+		(
+			f_Name,
+			GENERIC_WRITE | GENERIC_READ,
+			0,
+			NULL,
+			OPEN_ALWAYS,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+		);
+
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			std::cout << "Failed to open or create file" << std::endl;
+			std::cout << GetLastError();
+			return;
+		}
+		const char* msg = m_holder.data();
+		DWORD bytesWritten;
+		BOOL wFile = WriteFile(
+			hFile,
+			msg,
+			strlen(msg),
+			&bytesWritten,
+			NULL
+		);
+
+		if (wFile != 0)
+		{
+			std::cout << "Written to file successfully!" << std::endl;
+		}
+
+		if (wFile == 0)
+		{
+			std::cout << "Could not write to file!" << std::endl;
+			std::cout << GetLastError();
+		}
+
+		CloseHandle(hFile);
+
+		std::cout << "Thank you for using the program." << std::endl;
+	}
+
+	else
+	{
+		std::cout << "Thank you for using the program." << std::endl;
+	}
 }
 
 
@@ -114,6 +181,7 @@ void Bencode::Parser::ProcessChar(const char& c)
 		default:
 			if (isDigit(c))
 			{
+				temp = c;
 				m_state = State::Length;
 				break;
 			}
@@ -147,6 +215,7 @@ void Bencode::Parser::ProcessChar(const char& c)
 		}
 		else if (c == ':')
 			m_state = State::Str;
+		
 		else
 			m_state = State::ReadyForData;
 	}
@@ -182,7 +251,11 @@ void Bencode::Parser::ProcessChar(const char& c)
 			m_state = State::Int;
 		default:
 			if (isDigit(c))
+			{
+				m_state = State::Length;
+				temp = c;
 				break;
+			}
 		}
 	}
 	break;
@@ -197,7 +270,12 @@ void Bencode::Parser::ProcessChar(const char& c)
 			m_state = State::Int;
 		default:
 			if (isDigit(c))
+			{ 
+				m_state = State::Length;
+				temp = c;
 				break;
+			}
+				
 		}
 	}
 	break;

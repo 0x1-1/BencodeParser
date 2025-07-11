@@ -48,6 +48,7 @@ namespace Bencode
 		void PrintPieces();
 	private:
 		void Reset();
+		void WToFile();
 		void ProcessChar(const char& c);
 		
 		static bool isDigit(const char& c) {
@@ -66,9 +67,9 @@ namespace Bencode
 		};
 
 		int i = 0;
-		std::string temp;
+		
 		std::vector<BItem> m_items;
-		std::string m_string, m_int, m_hash;
+		std::string m_string, m_int, m_hash, temp, m_holder;
 		State m_state = State::ReadyForData;
 	};
 }
