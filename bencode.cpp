@@ -13,18 +13,22 @@ void Bencode::Parser::AddString(const std::string& ref, std::ostream& os)
 	GetHash();
 	Print();
 	PrintPieces();
+	if(!m_items.empty())
 	WToFile();
 
 }
 
 void Bencode::Parser::Print()
 {
-
-	for (auto& element : m_items)
-	{
-		std::cout << element.raw_value << std::endl;
-		m_holder += element.raw_value + "\n";
-	}
+	if (m_items.empty())
+		std::cout << "NO DATA COULD BE DECODED! CHECK DATA AGAIN." << std::endl;
+	
+		for (auto& element : m_items)
+		{
+			std::cout << element.raw_value << std::endl;
+			m_holder += element.raw_value + "\n";
+		}
+	
 }
 
 inline std::string ToHex(const std::string& binary)
@@ -59,8 +63,7 @@ void Bencode::Parser::PrintPieces()
     {
         std::string hash = m_hash.substr(i * SHA1_HASH_SIZE, SHA1_HASH_SIZE);
         std::cout << "Piece " << (i + 1) << ":\t" << ToHex(hash) << std::endl;
-		m_holder += ToHex(hash) + "\n";
-        
+		m_holder += ToHex(hash) + "\n";       
     }
 }
 
@@ -93,20 +96,28 @@ void Bencode::Parser::WToFile()
 	std::cin >> ch;
 	if (toupper(ch) == 'Y')
 	{
-		std::cout << "Enter the name for the text file. File will be saved in your desktop." << std::endl;
-		std::string fName;
-		std::cin >> fName;
-		fName = "C:\\Users\\User\\Desktop\\" + fName + ".txt";
-		std::wstring w_string = std::wstring(fName.begin(), fName.end());
-		LPCWSTR f_Name = w_string.data();
+		std::cout << "Enter the name for the text file." << std::endl << std::endl;
 		
+		OPENFILENAMEW file = { sizeof(OPENFILENAMEW) };
+		file.lpstrFilter = L"Text Files (*txt)\0*.txt\0All Files\0*.*\0\0";
+		wchar_t buff[MAX_PATH] = {};
+		file.nMaxFile = sizeof(buff);
+		file.lpstrFile = buff;
+		file.lpstrDefExt = L"txt";
+		file.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST;
+		BOOL f_save = GetSaveFileNameW(&file);
+		if (f_save != 0)
+		{
+			std::wcout << "The file will be saved in directory: " << buff << std::endl;
+		}
+		LPCWSTR f_Name = buff;
 		HANDLE hFile = CreateFileW
 		(
 			f_Name,
 			GENERIC_WRITE | GENERIC_READ,
 			0,
 			NULL,
-			OPEN_ALWAYS,
+			CREATE_ALWAYS,
 			FILE_ATTRIBUTE_NORMAL,
 			NULL
 		);
@@ -132,7 +143,7 @@ void Bencode::Parser::WToFile()
 			std::cout << "Written to file successfully!" << std::endl;
 		}
 
-		if (wFile == 0)
+		else if (wFile == 0)
 		{
 			std::cout << "Could not write to file!" << std::endl;
 			std::cout << GetLastError();
@@ -144,11 +155,10 @@ void Bencode::Parser::WToFile()
 	}
 
 	else
-	{
 		std::cout << "Thank you for using the program." << std::endl;
-	}
+	
+	
 }
-
 
 
 

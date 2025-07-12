@@ -6,6 +6,11 @@
 #include <iostream>
 #include <ctype.h>
 #include <windows.h>
+#include <shobjidl_core.h>
+
+
+
+
 
 namespace Bencode
 {
